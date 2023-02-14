@@ -1,3 +1,5 @@
+#Part 1
+
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
@@ -8,7 +10,6 @@ import pycountry_convert
 import pygal_maps_world
 import seaborn as sns
 
-#"""
 #Reads .csv files and sorts them by Article No., appending author info after article info, but never on the same line 
 df = pd.concat(map(pd.read_csv, ['articleinfo.csv', 'authorinfo.csv']))
 df = df.sort_values('Article No.')
@@ -94,7 +95,8 @@ new_df = df.sort_values('h-index', ascending=False)
 new_df = new_df[['Author Name', 'h-index']]
 new_df = new_df.reset_index(drop=True)
 print(new_df.head(5))
-#"""
+
+#----------------------------------------------------------------------------------------------------
 
 #Part 2 
 from sklearn.preprocessing import LabelEncoder
@@ -104,8 +106,9 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import r2_score,mean_squared_error
 import statsmodels.api as sm
 
-#"""
+#Reads in data.csv. The file has an extra unnamed column, so it must be removed by labeling all desired columns
 df = pd.read_csv('data.csv')
+print(df.isna().sum())
 df = df[['Purchase', 'SUS', 'Duration', 'Gender', 'ASR_Error', 'Intent_Error']]
 
 #Creating independent variables via encoding 
@@ -125,8 +128,10 @@ df['Gender'] = le.transform(df['Gender'])
 le.fit(df['Purchase'])
 df['Purchase'] = le.transform(df['Purchase'])
 
+#There is a large correlation present of whether or not the user purchases tickets and their satisfaction with the experience
 print(df.corr(method='pearson')['SUS'].sort_values())
 
+#Sets up Ordinary Least Squares Regression
 y = df['SUS']
 x = df[['ASR_Error', 'Intent_Error', 'Duration', 'Gender', 'Purchase']]
 x = sm.add_constant(x)
@@ -134,31 +139,37 @@ x = sm.add_constant(x)
 model = sm.OLS(y, x).fit()
 print(model.summary())
 
+#Sets input and output variables, and creates test and training data from given set 
+y = df['SUS']
+x = df[['ASR_Error', 'Intent_Error', 'Duration', 'Gender', 'Purchase']]
 x_train, x_test, y_train, y_test = train_test_split(x, y)
+
+#Runs linear regression model with training data 
 lr = LinearRegression().fit(x_train, y_train)
 
+#Gives trained model data it has never seen in order to determine what outcome it will give 
 y_train_pred = lr.predict(x_train)
 y_test_pred = lr.predict(x_test)
 
+
 print("R square score of linear regression: ", lr.score(x_test, y_test))
-#"""
+
+#-------------------------------------------------------------------------------------------------------------
 
 #Part 3
 from sklearn.preprocessing import StandardScaler
 from sklearn import linear_model
 from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 
-#""" 
-#Initial check to see if any data values are missing in set 
+#Initial check to see if any data values are missing in set (NaN row was removed in Question 2 code)
 print(df.isna().sum())
 
 #Create labels
 y = df['Purchase'].to_numpy()
-
 x = df[['ASR_Error', 'Intent_Error', 'Duration', 'Gender']].to_numpy()
 
 #Scales data (not necessary, but encouraged for extreme data ranges)
@@ -170,32 +181,24 @@ x_train, x_test, y_train, y_test = train_test_split(scaled_x, y, test_size = 0.5
 
 #Creates variables of each classification type we will be using 
 lr = LogisticRegression()
-neigh = KNeighborsClassifier(n_neighbors = 4)
+svc = SVC(probability=True) #In all honesty, I am not sure what the probability paramater stands for other than enabling estimates, so I have it set to true as shown in the given example 
 nbc = GaussianNB()
 rfc = RandomForestClassifier()
 
 #Fits training data into classification models and trains them 
 lr.fit(x_train, y_train)
-neigh.fit(x_train, y_train)
+svc.fit(x_train, y_train)
 nbc.fit(x_train, y_train)
 rfc.fit(x_train, y_train)
 
 #Once models are trained, test data is given to see how the models perform with unseen data 
 y_lr_predicted = lr.predict(x_test)
-y_lr_pred_probab = lr.predict_proba(x_test)
-
-y_neigh_predicted = neigh.predict(x_test)
-y_neigh_pred_probab = neigh.predict_proba(x_test)
-
+y_svc_predicted = svc.predict(x_test)
 y_nbc_predicted = nbc.predict(x_test)
-y_nbc_pred_probab = nbc.predict_proba(x_test)
-
 y_rfc_predicted = rfc.predict(x_test)
-y_rfc_pred_probab = rfc.predict_proba(x_test)
 
 #Results of unseen data tests are shown, comparing actual data to model performance 
 print(classification_report(y_test, y_lr_predicted))
-print(classification_report(y_test, y_neigh_predicted))
+print(classification_report(y_test, y_svc_predicted))
 print(classification_report(y_test, y_nbc_predicted))
 print(classification_report(y_test, y_rfc_predicted))
-#"""
